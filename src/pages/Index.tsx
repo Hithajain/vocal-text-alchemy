@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { getApiKey } from "@/utils/speechUtils";
 
 import Header from "@/components/Header";
@@ -33,13 +33,15 @@ const Index = () => {
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-grow flex items-start justify-center w-full py-8">
-        <TabsContent value="text-to-speech" className="w-full mt-0" hidden={activeTab !== "text-to-speech"}>
-          <TextToSpeech onApiKeyRequest={handleApiKeyRequest} />
-        </TabsContent>
-        
-        <TabsContent value="speech-to-text" className="w-full mt-0" hidden={activeTab !== "speech-to-text"}>
-          <SpeechToText />
-        </TabsContent>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsContent value="text-to-speech" className="w-full mt-0">
+            <TextToSpeech onApiKeyRequest={handleApiKeyRequest} />
+          </TabsContent>
+          
+          <TabsContent value="speech-to-text" className="w-full mt-0">
+            <SpeechToText />
+          </TabsContent>
+        </Tabs>
       </main>
       
       <footer className="text-center text-sm text-muted-foreground py-4">
