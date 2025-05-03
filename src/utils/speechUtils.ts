@@ -55,9 +55,17 @@ export const generateSpeech = async (text: string, voiceId: string, apiKey: stri
   }
 };
 
+// Define the types for the Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 // Using browser's Web Speech API for speech recognition
 export class SpeechRecognitionService {
-  recognition: SpeechRecognition | null = null;
+  recognition: any = null;
   isListening: boolean = false;
   
   constructor() {
@@ -76,14 +84,14 @@ export class SpeechRecognitionService {
     }
     
     try {
-      this.recognition.onresult = (event) => {
+      this.recognition.onresult = (event: any) => {
         const result = event.results[event.results.length - 1];
         const transcript = result[0].transcript;
         const isFinal = result.isFinal;
         onResult(transcript, isFinal);
       };
       
-      this.recognition.onerror = (event) => {
+      this.recognition.onerror = (event: any) => {
         onError(new Error(`Speech recognition error: ${event.error}`));
       };
       

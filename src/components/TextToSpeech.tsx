@@ -1,11 +1,10 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Audio, Play, Pause, Settings } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
+import { AudioWaveform as AudioIcon, Play, Pause, Settings } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import AudioWaveform from "./AudioWaveform";
 import { defaultVoices, getApiKey, generateSpeech } from "@/utils/speechUtils";
 
@@ -92,7 +91,7 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onApiKeyRequest }) => {
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Audio className="h-5 w-5 text-primary" /> 
+          <AudioIcon className="h-5 w-5 text-primary" /> 
           Text to Speech
         </CardTitle>
       </CardHeader>
