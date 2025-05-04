@@ -1,25 +1,64 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AudioWaveform as AudioIcon, Play, Pause, Settings } from "lucide-react";
+import { AudioWaveform as AudioIcon, Play, Pause, Volume2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AudioWaveform from "./AudioWaveform";
-import { defaultVoices, getApiKey, generateSpeech } from "@/utils/speechUtils";
 
-interface TextToSpeechProps {
-  onApiKeyRequest: () => void;
+interface Voice {
+  id: string;
+  name: string;
+  language: string;
 }
 
-const TextToSpeech: React.FC<TextToSpeechProps> = ({ onApiKeyRequest }) => {
+const TextToSpeech: React.FC = () => {
   const [text, setText] = useState("");
-  const [selectedVoice, setSelectedVoice] = useState(defaultVoices[0].id);
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const { toast } = useToast();
+
+  // Initialize available voices
+  useEffect(() => {
+    const initVoices = () => {
+      const speechSynthesis = window.speechSynthesis;
+      const availableVoices = speechSynthesis.getVoices();
+      
+      if (availableVoices.length > 0) {
+        const formattedVoices = availableVoices.map(voice => ({
+          id: voice.voiceURI,
+          name: voice.name,
+          language: voice.lang
+        }));
+        
+        setVoices(formattedVoices);
+        
+        // Set a default voice
+        if (formattedVoices.length > 0 && !selectedVoice) {
+          setSelectedVoice(formattedVoices[0].id);
+        }
+      }
+    };
+
+    // Get voices on load
+    initVoices();
+    
+    // Chrome loads voices asynchronously
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = initVoices;
+    }
+
+    // Cleanup
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -29,7 +68,7 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onApiKeyRequest }) => {
     setSelectedVoice(value);
   };
 
-  const handleGenerateSpeech = async () => {
+  const handleGenerateSpeech = () => {
     if (!text.trim()) {
       toast({
         title: "Text Required",
@@ -39,27 +78,52 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onApiKeyRequest }) => {
       return;
     }
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      onApiKeyRequest();
-      return;
-    }
-
+    setIsGenerating(true);
+    
     try {
-      setIsGenerating(true);
-      const url = await generateSpeech(text, selectedVoice, apiKey);
+      // Stop any current speech
+      window.speechSynthesis.cancel();
       
-      setAudioUrl(url);
+      // Create a new speech utterance
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Set the selected voice
+      const synVoices = window.speechSynthesis.getVoices();
+      const selectedSynVoice = synVoices.find(voice => voice.voiceURI === selectedVoice);
+      if (selectedSynVoice) {
+        utterance.voice = selectedSynVoice;
+      }
+      
+      // Set voice properties
+      utterance.rate = 1; // Normal speed
+      utterance.pitch = 1; // Normal pitch
+      
+      // Events
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+      };
+      
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+      
+      utterance.onerror = (event) => {
+        console.error("Speech synthesis error:", event.error);
+        setIsSpeaking(false);
+        toast({
+          title: "Speech Error",
+          description: `Error during speech synthesis: ${event.error}`,
+          variant: "destructive"
+        });
+      };
+      
+      // Speak
+      window.speechSynthesis.speak(utterance);
       
       toast({
-        title: "Speech Generated",
-        description: "Your text has been converted to speech"
+        title: "Speaking",
+        description: "Your text is being spoken"
       });
-      
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.load();
-      }
     } catch (error) {
       console.error("Failed to generate speech:", error);
       toast({
@@ -72,19 +136,14 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onApiKeyRequest }) => {
     }
   };
 
-  const togglePlayPause = () => {
-    if (!audioRef.current || !audioUrl) return;
+  const handleStopSpeech = () => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
     
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      void audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleAudioEnded = () => {
-    setIsPlaying(false);
+    toast({
+      title: "Speech Stopped",
+      description: "Text-to-speech has been stopped"
+    });
   };
 
   return (
@@ -108,57 +167,47 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onApiKeyRequest }) => {
         
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
           <div className="w-full sm:w-1/2">
-            <Select value={selectedVoice} onValueChange={handleVoiceChange} disabled={isGenerating}>
+            <Select 
+              value={selectedVoice} 
+              onValueChange={handleVoiceChange} 
+              disabled={isGenerating || voices.length === 0}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select a voice" />
               </SelectTrigger>
               <SelectContent>
-                {defaultVoices.map((voice) => (
+                {voices.map((voice) => (
                   <SelectItem key={voice.id} value={voice.id}>
-                    {voice.name} - {voice.description}
+                    {voice.name} - {voice.language}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           
-          <Button onClick={onApiKeyRequest} variant="outline" size="sm" className="w-full sm:w-auto">
-            <Settings className="h-4 w-4 mr-2" /> API Key
+          <Button variant="outline" size="sm" className="w-full sm:w-auto">
+            <Volume2 className="h-4 w-4 mr-2" /> Adjust Voice
           </Button>
         </div>
         
-        {audioUrl && (
-          <>
-            <AudioWaveform isActive={isPlaying} />
-            <audio 
-              ref={audioRef} 
-              src={audioUrl} 
-              onEnded={handleAudioEnded} 
-              className="hidden"
-            />
-          </>
-        )}
+        {isSpeaking && <AudioWaveform isActive={isSpeaking} />}
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Button 
-          onClick={handleGenerateSpeech} 
-          disabled={isGenerating || !text.trim()} 
-          className="w-full sm:w-auto"
-        >
-          {isGenerating ? "Generating..." : "Generate Speech"}
-        </Button>
-        
-        {audioUrl && (
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={togglePlayPause}
+        {!isSpeaking ? (
+          <Button 
+            onClick={handleGenerateSpeech} 
+            disabled={isGenerating || !text.trim() || voices.length === 0} 
+            className="w-full sm:w-auto"
           >
-            {isPlaying ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
+            {isGenerating ? "Generating..." : "Speak Text"}
+          </Button>
+        ) : (
+          <Button 
+            onClick={handleStopSpeech}
+            variant="outline"
+            className="w-full sm:w-auto"
+          >
+            Stop Speaking
           </Button>
         )}
       </CardFooter>
