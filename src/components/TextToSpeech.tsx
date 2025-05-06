@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AudioWaveform as AudioIcon, Play, Pause, Volume2 } from "lucide-react";
+import { AudioWaveform as AudioIcon, Play, Pause, Volume2, FileText, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AudioWaveform from "./AudioWaveform";
+import { extractTextFromPdf } from "@/utils/pdfUtils";
 
 interface Voice {
   id: string;
@@ -20,6 +20,7 @@ const TextToSpeech: React.FC = () => {
   const [selectedVoice, setSelectedVoice] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
   const { toast } = useToast();
 
   // Initialize available voices
@@ -146,6 +147,51 @@ const TextToSpeech: React.FC = () => {
     });
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if the file is a PDF
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid File",
+        description: "Please upload a PDF file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessingFile(true);
+    
+    try {
+      toast({
+        title: "Processing PDF",
+        description: "Extracting text from your PDF file..."
+      });
+      
+      const extractedText = await extractTextFromPdf(file);
+      
+      // Update the text area with the extracted content
+      setText(extractedText);
+      
+      toast({
+        title: "PDF Processed",
+        description: `Successfully extracted text from ${file.name}`
+      });
+    } catch (error) {
+      console.error("Error processing PDF:", error);
+      toast({
+        title: "Processing Failed",
+        description: error instanceof Error ? error.message : "Failed to process the PDF file",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessingFile(false);
+      // Clear the file input
+      e.target.value = '';
+    }
+  };
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -156,12 +202,32 @@ const TextToSpeech: React.FC = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center">
+              <label 
+                htmlFor="pdf-upload" 
+                className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground"
+              >
+                <Paperclip className="h-4 w-4" />
+                Attach PDF
+              </label>
+              <input 
+                id="pdf-upload"
+                type="file"
+                accept="application/pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={isProcessingFile}
+              />
+            </div>
+            {isProcessingFile && <span className="text-xs animate-pulse">Processing PDF...</span>}
+          </div>
           <Textarea
-            placeholder="Enter text to convert to speech..."
+            placeholder="Enter text to convert to speech or upload a PDF..."
             className="min-h-[200px] resize-none"
             value={text}
             onChange={handleTextChange}
-            disabled={isGenerating}
+            disabled={isGenerating || isProcessingFile}
           />
         </div>
         
@@ -196,7 +262,7 @@ const TextToSpeech: React.FC = () => {
         {!isSpeaking ? (
           <Button 
             onClick={handleGenerateSpeech} 
-            disabled={isGenerating || !text.trim() || voices.length === 0} 
+            disabled={isGenerating || !text.trim() || voices.length === 0 || isProcessingFile} 
             className="w-full sm:w-auto"
           >
             {isGenerating ? "Generating..." : "Speak Text"}

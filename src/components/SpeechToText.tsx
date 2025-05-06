@@ -3,15 +3,17 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, MicOff, Copy, Text } from "lucide-react";
+import { Mic, MicOff, Copy, Text, Paperclip, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AudioWaveform from "./AudioWaveform";
 import { SpeechRecognitionService } from "@/utils/speechUtils";
+import { extractTextFromPdf } from "@/utils/pdfUtils";
 
 const SpeechToText: React.FC = () => {
   const [transcript, setTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [recognitionService, setRecognitionService] = useState<SpeechRecognitionService | null>(null);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -96,6 +98,51 @@ const SpeechToText: React.FC = () => {
     );
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if the file is a PDF
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid File",
+        description: "Please upload a PDF file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessingFile(true);
+    
+    try {
+      toast({
+        title: "Processing PDF",
+        description: "Extracting text from your PDF file..."
+      });
+      
+      const extractedText = await extractTextFromPdf(file);
+      
+      // Update the transcript with the extracted content
+      setTranscript(extractedText);
+      
+      toast({
+        title: "PDF Processed",
+        description: `Successfully extracted text from ${file.name}`
+      });
+    } catch (error) {
+      console.error("Error processing PDF:", error);
+      toast({
+        title: "Processing Failed",
+        description: error instanceof Error ? error.message : "Failed to process the PDF file",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessingFile(false);
+      // Clear the file input
+      e.target.value = '';
+    }
+  };
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -112,6 +159,7 @@ const SpeechToText: React.FC = () => {
               size="lg"
               variant={isListening ? "default" : "outline"}
               className={`rounded-full h-20 w-20 flex items-center justify-center ${isListening ? 'bg-accent hover:bg-accent/90' : ''}`}
+              disabled={isProcessingFile}
             >
               {isListening ? (
                 <MicOff className="h-10 w-10" />
@@ -126,20 +174,41 @@ const SpeechToText: React.FC = () => {
         <AudioWaveform isActive={isListening} />
         
         <div className="space-y-2">
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center">
+              <label 
+                htmlFor="pdf-upload-speech" 
+                className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground"
+              >
+                <Paperclip className="h-4 w-4" />
+                Attach PDF
+              </label>
+              <input 
+                id="pdf-upload-speech"
+                type="file"
+                accept="application/pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={isListening || isProcessingFile}
+              />
+            </div>
+            {isProcessingFile && <span className="text-xs animate-pulse">Processing PDF...</span>}
+          </div>
           <Textarea
-            placeholder="Your speech will appear here..."
+            placeholder="Your speech will appear here or upload a PDF to extract text..."
             className="min-h-[200px] resize-none"
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             readOnly={false}
+            disabled={isProcessingFile}
           />
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Button onClick={handleClear} variant="outline" disabled={!transcript}>
+        <Button onClick={handleClear} variant="outline" disabled={!transcript || isProcessingFile}>
           Clear
         </Button>
-        <Button onClick={handleCopy} disabled={!transcript}>
+        <Button onClick={handleCopy} disabled={!transcript || isProcessingFile}>
           <Copy className="h-4 w-4 mr-2" /> Copy Text
         </Button>
       </CardFooter>

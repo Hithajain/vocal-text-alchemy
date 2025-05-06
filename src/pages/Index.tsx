@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import Header from "@/components/Header";
 import TextToSpeech from "@/components/TextToSpeech";
@@ -15,6 +15,11 @@ const Index = () => {
       
       <main className="flex-grow flex items-start justify-center w-full py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="hidden">
+            <TabsTrigger value="text-to-speech">Text to Speech</TabsTrigger>
+            <TabsTrigger value="speech-to-text">Speech to Text</TabsTrigger>
+          </TabsList>
+          
           <TabsContent value="text-to-speech" className="w-full mt-0">
             <TextToSpeech />
           </TabsContent>
