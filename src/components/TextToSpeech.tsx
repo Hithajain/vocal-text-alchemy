@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AudioWaveform as AudioIcon, Play, Pause, Volume2, FileText, Paperclip } from "lucide-react";
+import { AudioWaveform as AudioIcon, Play, Pause, Volume2, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AudioWaveform from "./AudioWaveform";
 import { extractTextFromPdf } from "@/utils/pdfUtils";
@@ -21,6 +22,7 @@ const TextToSpeech: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   // Initialize available voices
@@ -147,9 +149,16 @@ const TextToSpeech: React.FC = () => {
     });
   };
 
+  const handleClearText = () => {
+    setText("");
+    setSelectedFile(null);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    setSelectedFile(file);
 
     // Check if the file is a PDF
     if (file.type !== 'application/pdf') {
@@ -176,7 +185,8 @@ const TextToSpeech: React.FC = () => {
       
       toast({
         title: "PDF Processed",
-        description: `Successfully extracted text from ${file.name}`
+        description: `Successfully extracted text from ${file.name}`,
+        variant: "success"
       });
     } catch (error) {
       console.error("Error processing PDF:", error);
@@ -203,14 +213,17 @@ const TextToSpeech: React.FC = () => {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center">
-              <label 
-                htmlFor="pdf-upload" 
-                className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground"
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => document.getElementById('pdf-upload')?.click()}
+                disabled={isProcessingFile}
               >
-                <Paperclip className="h-4 w-4" />
-                Attach PDF
-              </label>
+                <FileText className="h-4 w-4" />
+                {selectedFile ? `${selectedFile.name}` : "Attach PDF"}
+              </Button>
               <input 
                 id="pdf-upload"
                 type="file"
@@ -221,6 +234,11 @@ const TextToSpeech: React.FC = () => {
               />
             </div>
             {isProcessingFile && <span className="text-xs animate-pulse">Processing PDF...</span>}
+            {!isProcessingFile && text && (
+              <Button variant="ghost" size="sm" onClick={handleClearText}>
+                Clear Text
+              </Button>
+            )}
           </div>
           <Textarea
             placeholder="Enter text to convert to speech or upload a PDF..."
@@ -250,10 +268,6 @@ const TextToSpeech: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
-          
-          <Button variant="outline" size="sm" className="w-full sm:w-auto">
-            <Volume2 className="h-4 w-4 mr-2" /> Adjust Voice
-          </Button>
         </div>
         
         {isSpeaking && <AudioWaveform isActive={isSpeaking} />}
