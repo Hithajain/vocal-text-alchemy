@@ -14,7 +14,7 @@ const Index = () => {
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-grow flex items-start justify-center w-full py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="hidden">
             <TabsTrigger value="text-to-speech">Text to Speech</TabsTrigger>
             <TabsTrigger value="speech-to-text">Speech to Text</TabsTrigger>
