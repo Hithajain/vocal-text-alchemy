@@ -1,93 +1,44 @@
-const AI_API_URL = 'https://api.openai.com/v1/chat/completions';
-
 export class AIService {
-  private apiKey: string | null = null;
-
-  constructor() {
-    this.apiKey = localStorage.getItem('openai_api_key');
-  }
-
-  setApiKey(apiKey: string) {
-    this.apiKey = apiKey;
-    localStorage.setItem('openai_api_key', apiKey);
-  }
-
-  hasApiKey(): boolean {
-    return !!this.apiKey;
-  }
-
   async summarizePDF(text: string): Promise<string> {
-    if (!this.apiKey) {
-      throw new Error('API key not set');
-    }
-
-    const response = await fetch(AI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that creates concise and informative summaries of documents. Provide a clear, well-structured summary that captures the main points and key information.'
-          },
-          {
-            role: 'user',
-            content: `Please provide a comprehensive summary of the following document:\n\n${text}`
-          }
-        ],
-        max_tokens: 1000,
-        temperature: 0.3,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error?.message || `API request failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0]?.message?.content || 'No summary generated';
+    // Simple client-side summarization using text processing
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const words = text.split(/\s+/);
+    
+    // Get first few sentences and key information
+    const summary = sentences.slice(0, 5).join('. ') + '.';
+    
+    return `Document Summary:\n\nThis document contains approximately ${words.length} words across ${sentences.length} sentences.\n\n${summary}\n\nNote: This is a basic text-based summary. For AI-powered analysis, please use a service that supports API integration.`;
   }
 
   async answerQuestion(text: string, question: string): Promise<string> {
-    if (!this.apiKey) {
-      throw new Error('API key not set');
+    // Simple keyword-based search in the document
+    const lowerText = text.toLowerCase();
+    const lowerQuestion = question.toLowerCase();
+    
+    // Extract key words from the question
+    const questionWords = lowerQuestion.split(/\s+/).filter(word => 
+      word.length > 3 && !['what', 'where', 'when', 'why', 'how', 'does', 'have', 'will', 'can', 'the'].includes(word)
+    );
+    
+    // Find sentences containing question keywords
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const relevantSentences = sentences.filter(sentence => 
+      questionWords.some(word => sentence.toLowerCase().includes(word))
+    );
+    
+    if (relevantSentences.length > 0) {
+      return `Based on the document content, here are the relevant sections:\n\n${relevantSentences.slice(0, 3).join('. ')}.`;
+    } else {
+      return `I couldn't find specific information related to "${question}" in the document. Please try rephrasing your question or check if the information exists in the document.`;
     }
+  }
 
-    const response = await fetch(AI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that answers questions based on the provided document. Only answer questions that can be answered from the document content. If the information is not in the document, say so clearly.'
-          },
-          {
-            role: 'user',
-            content: `Based on the following document, please answer the question.\n\nDocument:\n${text}\n\nQuestion: ${question}`
-          }
-        ],
-        max_tokens: 800,
-        temperature: 0.2,
-      }),
-    });
+  hasApiKey(): boolean {
+    return true; // Always return true since we don't need API keys
+  }
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error?.message || `API request failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0]?.message?.content || 'No answer generated';
+  setApiKey(apiKey: string) {
+    // No-op since we don't use API keys
   }
 }
 

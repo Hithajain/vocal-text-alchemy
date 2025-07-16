@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { extractTextFromPdf } from "@/utils/pdfUtils";
 import { aiService } from "@/utils/aiService";
 import { SpeechRecognitionService } from "@/utils/speechUtils";
-import ApiKeyModal from "./ApiKeyModal";
 
 const PdfAnalyzer: React.FC = () => {
   const [pdfText, setPdfText] = useState("");
@@ -20,7 +19,6 @@ const PdfAnalyzer: React.FC = () => {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isAnsweringQuestion, setIsAnsweringQuestion] = useState(false);
   const [isListeningQuestion, setIsListeningQuestion] = useState(false);
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [recognitionService] = useState(() => new SpeechRecognitionService());
   const { toast } = useToast();
 
@@ -79,11 +77,6 @@ const PdfAnalyzer: React.FC = () => {
       return;
     }
 
-    if (!aiService.hasApiKey()) {
-      setShowApiKeyModal(true);
-      return;
-    }
-
     setIsGeneratingSummary(true);
     
     try {
@@ -122,11 +115,6 @@ const PdfAnalyzer: React.FC = () => {
         description: "Please enter a question",
         variant: "destructive"
       });
-      return;
-    }
-
-    if (!aiService.hasApiKey()) {
-      setShowApiKeyModal(true);
       return;
     }
 
@@ -188,17 +176,8 @@ const PdfAnalyzer: React.FC = () => {
     }
   };
 
-  const handleApiKeySubmit = (apiKey: string) => {
-    aiService.setApiKey(apiKey);
-    toast({
-      title: "API Key Set",
-      description: "You can now use AI features"
-    });
-  };
-
   return (
-    <>
-      <Card className="w-full max-w-4xl mx-auto">
+    <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileSearch className="h-5 w-5 text-primary" />
@@ -322,21 +301,12 @@ const PdfAnalyzer: React.FC = () => {
           )}
         </CardContent>
         <CardFooter>
-          {!aiService.hasApiKey() && (
-            <p className="text-sm text-muted-foreground">
-              OpenAI API key required for AI features. Click any AI button to set it up.
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Using built-in text analysis. For advanced AI features, consider integrating with AI services.
+          </p>
         </CardFooter>
       </Card>
-
-      <ApiKeyModal
-        open={showApiKeyModal}
-        onClose={() => setShowApiKeyModal(false)}
-        onApiKeySubmit={handleApiKeySubmit}
-      />
-    </>
-  );
+    );
 };
 
 export default PdfAnalyzer;
