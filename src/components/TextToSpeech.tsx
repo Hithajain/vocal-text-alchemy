@@ -185,8 +185,7 @@ const TextToSpeech: React.FC = () => {
       
       toast({
         title: "PDF Processed",
-        description: `Successfully extracted text from ${file.name}`,
-        variant: "success"
+        description: `Successfully extracted text from ${file.name}`
       });
     } catch (error) {
       console.error("Error processing PDF:", error);

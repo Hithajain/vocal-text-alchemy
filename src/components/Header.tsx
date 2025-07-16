@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Speech, Text } from "lucide-react";
+import { Speech, Text, FileSearch } from "lucide-react";
 
 interface HeaderProps {
   activeTab: string;
@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
         onValueChange={setActiveTab} 
         className="w-full max-w-md mt-4"
       >
-        <TabsList className="grid grid-cols-2 w-full">
+        <TabsList className="grid grid-cols-3 w-full">
           <TabsTrigger value="text-to-speech" className="flex items-center gap-2">
             <Text className="h-4 w-4" />
             <span>Text to Speech</span>
@@ -36,6 +36,10 @@ const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
           <TabsTrigger value="speech-to-text" className="flex items-center gap-2">
             <Speech className="h-4 w-4" />
             <span>Speech to Text</span>
+          </TabsTrigger>
+          <TabsTrigger value="pdf-analyzer" className="flex items-center gap-2">
+            <FileSearch className="h-4 w-4" />
+            <span>PDF Analyzer</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
